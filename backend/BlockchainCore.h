@@ -35,12 +35,76 @@ std::string sha256(const std::string& input) {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-struct Transaction {
+class Transaction {
+private:
     string sender, receiver;
-    double amount;
+    float amount;
+    string signature;
 
-    Transaction(string s, string r, double a)
-        : sender(std::move(s)), receiver(std::move(r)), amount(a) {}
+public:
+    Transaction() = default;
+    Transaction(const std::string& sender, const std::string& receiver, float amount)
+        : sender(sender), receiver(receiver), amount(amount) {}
+
+    std::string getData() const {
+        return sender + receiver + std::to_string(amount);
+    }
+
+    const std::string& getSender() const { return sender; }
+    const std::string& getReceiver() const { return receiver; }
+    float getAmount() const { return amount; }
+    const std::string& getSignature() const { return signature; }
+    void setSignature(const std::string& sig) { signature = sig; }
+
+    bool signTransaction(const std::string& privateKeyPEM) {
+        EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
+        if (!mdctx) return false;
+
+        BIO* bio = BIO_new_mem_buf(privateKeyPEM.c_str(), -1);
+        EVP_PKEY* pkey = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL);
+        BIO_free(bio);
+        if (!pkey) return false;
+
+        if (EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL, pkey) != 1) return false;
+
+        std::string data = getData();
+        if (EVP_DigestSignUpdate(mdctx, data.c_str(), data.size()) != 1) return false;
+
+        size_t sigLen;
+        if (EVP_DigestSignFinal(mdctx, NULL, &sigLen) != 1) return false;
+
+        std::string sig(sigLen, '\0');
+        if (EVP_DigestSignFinal(mdctx, reinterpret_cast<unsigned char*>(&sig[0]), &sigLen) != 1) return false;
+
+        sig.resize(sigLen);
+        signature = sig;
+
+        EVP_MD_CTX_free(mdctx);
+        EVP_PKEY_free(pkey);
+        return true;
+    }
+
+    bool verifySignature(const std::string& publicKeyPEM) const {
+        EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
+        if (!mdctx) return false;
+
+        BIO* bio = BIO_new_mem_buf(publicKeyPEM.c_str(), -1);
+        EVP_PKEY* pkey = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
+        BIO_free(bio);
+        if (!pkey) return false;
+
+        if (EVP_DigestVerifyInit(mdctx, NULL, EVP_sha256(), NULL, pkey) != 1) return false;
+
+        std::string data = getData();
+        if (EVP_DigestVerifyUpdate(mdctx, data.c_str(), data.size()) != 1) return false;
+
+        bool result = EVP_DigestVerifyFinal(mdctx,
+            reinterpret_cast<const unsigned char*>(signature.data()), signature.size()) == 1;
+
+        EVP_MD_CTX_free(mdctx);
+        EVP_PKEY_free(pkey);
+        return result;
+    }
 
     string toString() const {
         return sender + "->" + receiver + ": " + to_string(amount);
