@@ -1,6 +1,7 @@
 #ifndef BLOCKCHAIN_CORE_H
 #define BLOCKCHAIN_CORE_H
 
+#include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <vector>
@@ -24,7 +25,7 @@ inline std::string sha256(const std::string &input) {
     // Convert the binary hash to hexadecimal string
     std::ostringstream oss;
     for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i)
-        oss << std::hex << std::setw(2) << std::setfill('0') 
+        oss << std::hex << std::setw(2) << std::setfill('0')
             << static_cast<int>(hash[i]);
     return oss.str();
 }
@@ -193,7 +194,6 @@ public:
 
     Block(std::vector<Transaction> txs, std::string prevHash, std::string ver = "1.0")
         : previousHash(std::move(prevHash)), transactions(std::move(txs)), version(std::move(ver)) {
-        
         // Set timestamp to current system time in milliseconds
         timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::system_clock::now().time_since_epoch()
@@ -253,4 +253,36 @@ public:
     }
 };
 
+class P2PNode {
+private:
+    BloomFilter *bloom_filter;
+    std::vector<P2PNode*> peers;
+
+public:
+    // Constructor to initialize the P2P node with a Bloom filter and peer nodes
+    P2PNode(BloomFilter *filter) : bloom_filter(filter) {}
+
+    // Add a peer node (another P2P node) to the network
+    void add_peer(P2PNode* peer) {
+        peers.push_back(peer);
+    }
+
+    // Receive a transaction, check if it's new, and propagate if necessary
+    void receive_transaction(const std::string &transaction_id) {
+        if (!bloom_filter->check(transaction_id)) {
+            std::cout << "New transaction " << transaction_id << " received. Propagating..." << std::endl;
+            bloom_filter->add(transaction_id);  // Add to the Bloom filter
+            propagate(transaction_id);
+        } else {
+            std::cout << "Transaction " << transaction_id << " already seen. Not propagating." << std::endl;
+        }
+    }
+
+    // Propagate the transaction to connected peers
+    void propagate(const std::string &transaction_id) {
+        for (auto peer : peers) {
+            peer->receive_transaction(transaction_id);
+        }
+    }
+};
 #endif
