@@ -31,25 +31,53 @@ inline std::string sha256(const std::string &input) {
 }
 
 // Transaction - Represents a simple transfer between two parties
+enum class EventType { CREATE, TRANSFER };
+
 class Transaction {
 private:
-    std::string sender, receiver;
-    float amount;
-    std::string signature;
+    EventType           event;
+    std::string         assetId;      // e.g. “SKU‑123” or a serial number
+    std::string         fromParty;    // “GENESIS” for creation
+    std::string         toParty;
+    std::string         meta;         // free‑form JSON / notes
+    std::string         signature;    // optional crypto sig
 
 public:
     Transaction() = default;
-    Transaction(const std::string& sender, const std::string& receiver, float amount)
-        : sender(sender), receiver(receiver), amount(amount) {}
+    Transaction(EventType ev,
+                std::string asset,
+                std::string from,
+                std::string to,
+                std::string meta = {})
+        : event(ev),
+          assetId(std::move(asset)),
+          fromParty(std::move(from)),
+          toParty(std::move(to)),
+          meta(std::move(meta)) {}
 
-    std::string getData() const {
-        return sender + receiver + std::to_string(amount);
+    // handy named constructors
+    static Transaction create(std::string assetId,
+                              std::string owner,
+                              std::string meta = {}) {
+        return Transaction(EventType::CREATE, std::move(assetId),
+                           "GENESIS", std::move(owner), std::move(meta));
+    }
+    static Transaction transfer(std::string assetId,
+                                std::string from,
+                                std::string to,
+                                std::string meta = {}) {
+        return Transaction(EventType::TRANSFER, std::move(assetId),
+                           std::move(from), std::move(to), std::move(meta));
     }
 
-    const std::string& getSender() const { return sender; }
-    const std::string& getReceiver() const { return receiver; }
-    float getAmount() const { return amount; }
-    const std::string& getSignature() const { return signature; }
+    // getters
+    EventType     getEvent()   const { return event;     }
+    const std::string& getAssetId()  const { return assetId;  }
+    const std::string& getFrom()     const { return fromParty;}
+    const std::string& getTo()       const { return toParty;  }
+    const std::string& getMeta()     const { return meta;     }
+    const std::string& getSignature()const { return signature;}
+
     void setSignature(const std::string& sig) { signature = sig; }
 
     bool signTransaction(const std::string& privateKeyPEM) {
@@ -102,8 +130,17 @@ public:
         return result;
     }
 
+    std::string getData() const {
+        return std::to_string(static_cast<int>(event))
+             + assetId + fromParty + toParty + meta;
+    }
     std::string toString() const {
-        return sender + "->" + receiver + ": " + std::to_string(amount);
+        std::ostringstream oss;
+        oss << '[' << (event == EventType::CREATE ? "CREATE" : "TRANSFER")
+            << "] " << assetId << ' '
+            << fromParty << " -> " << toParty;
+        if (!meta.empty()) oss << " | " << meta;
+        return oss.str();
     }
 };
 
@@ -184,25 +221,28 @@ public:
 // Block - Contains transactions along with previous hash and proof-of-work details
 class Block {
 public:
-    std::string previousHash;
-    std::string merkleRoot;
-    std::string hash;
-    std::string version;
-    long long timestamp;
-    int nonce = 0;
+    std::string              previousHash;
+    std::string              merkleRoot;
+    std::string              hash;
+    std::string              version;
+    long long                timestamp;
+    int                      nonce = 0;
     std::vector<Transaction> transactions;
 
-    Block(std::vector<Transaction> txs, std::string prevHash, std::string ver = "1.0")
-        : previousHash(std::move(prevHash)), transactions(std::move(txs)), version(std::move(ver)) {
-        // Set timestamp to current system time in milliseconds
+    Block(std::vector<Transaction> txs,
+          std::string prevHash,
+          std::string ver = "1.0")
+        : previousHash(std::move(prevHash)),
+          transactions(std::move(txs)),
+          version(std::move(ver)) {
+
         timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::system_clock::now().time_since_epoch()
                     ).count();
 
         std::vector<std::string> txHashes;
         txHashes.reserve(transactions.size());
-
-        for (const auto &tx : transactions)
+        for (const auto& tx : transactions)
             txHashes.emplace_back(sha256(tx.toString()));
 
         MerkleTree mt;
@@ -210,32 +250,30 @@ public:
     }
 
     std::string data() const {
-        return previousHash + merkleRoot + version + std::to_string(timestamp);
+        return previousHash + merkleRoot
+             + version + std::to_string(timestamp);
     }
-
-    void setNonce(int n) { nonce = n; }
-    void setHash(std::string h) { hash = std::move(h); }
-
+    void setNonce(int n)      { nonce = n;        }
+    void setHash(std::string h){ hash = std::move(h);}
     std::string calculateHash() const {
         return sha256(data() + std::to_string(nonce));
     }
 };
 
+
 // Blockchain - Manages the chain of blocks and the addition of new blocks
 class Blockchain {
     std::vector<Block> chain;
-    int difficulty;
+    int                difficulty;
 
 public:
-    explicit Blockchain(int diff = 4) : difficulty(diff) {
-        // Create genesis block; note that for genesis, you might want to set the hash explicitly.
+    explicit Blockchain(int diff = 3) : difficulty(diff) {
         chain.emplace_back(std::vector<Transaction>{}, "0");
     }
 
-    // Adds a new block with the given transactions to the blockchain
     void addBlock(std::vector<Transaction> txs) {
-        const std::string &prevHash = chain.back().hash.empty() 
-                                      ? chain.back().calculateHash() 
+        const std::string& prevHash =
+            chain.back().hash.empty() ? chain.back().calculateHash()
                                       : chain.back().hash;
 
         Block block(std::move(txs), prevHash);
@@ -247,10 +285,7 @@ public:
         chain.emplace_back(std::move(block));
     }
 
-    // Provides read-only access to the chain.
-    const std::vector<Block>& getChain() const {
-        return chain;
-    }
+    const std::vector<Block>& getChain() const { return chain; }
 };
 
 class P2PNode {
@@ -285,4 +320,19 @@ public:
         }
     }
 };
+
+// helper
+// If you plan to expose this class to Python, export_block_txs is handy:
+inline std::vector<std::vector<std::string>>
+export_block_txs(const Blockchain& bc) {
+    std::vector<std::vector<std::string>> out;
+    for (const auto& blk : bc.getChain()) {
+        std::vector<std::string> txs;
+        for (const auto& tx : blk.transactions)
+            txs.push_back(tx.toString());
+        out.push_back(std::move(txs));
+    }
+    return out;
+}
+
 #endif
