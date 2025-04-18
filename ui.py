@@ -16,7 +16,7 @@ with tab1:
         if st.button("Create"):
             try:
                 res = requests.post(f"{API}/asset", json={"event": ev, "asset_id": aid, "to_party": to, "meta": meta})
-                st.success(res.json())
+                st.success(f"✅ Success! {res.json()}")
             except requests.exceptions.RequestException as e:
                 st.error(f"❌ Request failed: {e}")
     else:
@@ -25,11 +25,37 @@ with tab1:
         if st.button("Transfer"):
             try:
                 res = requests.post(f"{API}/transfer", json={"event": ev, "asset_id": aid, "from_party": frm, "to_party": to, "meta": meta})
-                st.success(res.json())
+                st.success(f"✅ Success! {res.json()}")
             except requests.exceptions.RequestException as e:
                 st.error(f"❌ Request failed: {e}")
 
 with tab2:
+    # ---------- 1. one-time CSS ----------
+    st.markdown(
+        """
+        <style>
+            .hblk {
+                background:#111;
+                border:1px solid #333;
+                border-radius:10px;
+                padding:12px;
+                min-width: 200px;
+                min-height: 100px;
+                text-align: left;
+            }
+            .arrowbox {
+                font-size: 2rem;
+                padding-top: 8rem;
+                display: flex;
+                justify-content: center;    /* horizontally center */
+                align-items: center;        /* vertically center */
+                height: 100%;
+                color: #888;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     st.header("Blockchain Ledger")
 
     # fetch rich chain data
@@ -43,19 +69,28 @@ with tab2:
     # skip genesis?
     data = [b for b in data if b["index"] != 0]
 
-    for i in range(0, len(data), 2):
-        cols = st.columns(2)
-        for j, blk in enumerate(data[i:i+2]):
+    max_per_row = 3
+    for i in range(0, len(data), max_per_row):
+        # cols = st.columns(max_per_row*2 )
+        cols = st.columns([6, 1] * (max_per_row ))
+        for j, blk in enumerate(data[i:i+max_per_row]):
+            j = j*2     # to account for the arrow
             with cols[j]:
-                st.markdown(f"### Block #{blk['index']}")
-                st.markdown(f"- **Nonce:** {blk['nonce']}")
-                st.markdown(f"- **Prev:** `{blk['prev']}`")
-                st.markdown(f"- **Hash:** `{blk['hash']}`")
-                st.markdown(f"- **Tx Count:** {len(blk['tx'])}")
+                st.markdown(f"""
+                    <div class='hblk'>
+                        <h3>Block #{blk['index']}</h3>
+                        <p><strong>Nonce:</strong> {blk['nonce']}<br>
+                        <strong>Prev:</strong> <code>{blk['prev']}</code><br>
+                        <strong>Hash:</strong> <code>{blk['hash']}</code><br>
+                        <strong>Tx Count:</strong> {len(blk['tx'])}</p>
+                    </div>
+                """, unsafe_allow_html=True)
                 for tx in blk["tx"]:
                     st.code(tx)
-        if i+2 < len(data):
-            st.markdown("➜", unsafe_allow_html=True)
+            # adding arrow
+            if i != len(data) - 1:
+                with cols[j + 1]:
+                    st.markdown('<div class="arrowbox">➜</div>', unsafe_allow_html=True)
 
 
 

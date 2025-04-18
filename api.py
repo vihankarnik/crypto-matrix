@@ -89,7 +89,6 @@ def get_internal_ip() -> str | None:
     return _internal_ip
 
 print("Private IP:", get_internal_ip())
-print("heyyy")
 
 def sync_chain():
     for peer in list(PEERS):

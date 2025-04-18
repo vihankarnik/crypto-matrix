@@ -13,7 +13,7 @@ if [ -n "$BOOTSTRAP_PORT" ]; then
 fi
 
 # Start backend
-uvicorn api:app --reload --host 0.0.0.0 --port $SELF_PORT &
+uvicorn api:app --host 0.0.0.0 --port $SELF_PORT &
 API_PID=$!
 
 # Start UI
