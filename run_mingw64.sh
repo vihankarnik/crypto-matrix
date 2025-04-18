@@ -8,8 +8,8 @@ rm -rf ./*
 cmake -G "MinGW Makefiles" .. && mingw32-make && cd ..
 
 # start API in background
-python -m uvicorn main:app --reload --port 8000 &
-API_PID=$!
+# python -m uvicorn main:app --reload --port 8000 &
+# API_PID=$!
 
 # start UI (blocking)
 streamlit run app.py
