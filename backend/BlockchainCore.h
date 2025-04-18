@@ -202,7 +202,13 @@ public:
     }
 
     void addBlock(std::vector<Transaction> txs) {
-        const std::string& prevHash = chain.back().hash.empty() ? chain.back().calculateHash() : chain.back().hash;
+        std::string prevHash;
+        if(chain.empty()){
+            prevHash = "0"; // or some GENESIS_HASH constant
+        }
+        else{
+            prevHash = chain.back().hash.empty() ? chain.back().calculateHash() : chain.back().hash;
+        }
         Block block(std::move(txs), prevHash);
         ProofOfWork pow(difficulty);
         int nonce = 0;

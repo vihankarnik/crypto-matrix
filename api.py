@@ -113,12 +113,12 @@ def refresh_state():
 
     for block in CHAIN.get_blocks():
         for tx in block:
-            parts = tx.split()
+            parts = tx.split() # tx is a string
             # "[CREATE] SKU GENESIS -> Alice | ... "
             if len(parts) < 4:
                 continue
             aid = parts[1]
-            owner = parts[3]
+            owner = parts[4]
 
             # ------------- 1) check duplicates -------------
             if aid in WORLD_STATE and WORLD_STATE[aid] == owner:
