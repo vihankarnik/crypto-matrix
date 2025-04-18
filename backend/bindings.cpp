@@ -49,5 +49,6 @@ PYBIND11_MODULE(blockchain, m)
         .def(py::init<int>(), py::arg("difficulty") = 3)
         .def("add_block",  &Blockchain::addBlock,
              py::arg("transactions"))
-        .def("get_blocks", &export_block_txs);
+        .def("get_blocks", &export_block_txs)
+        .def("load_chain", &Blockchain::loadChain,  py::arg("raw_chain"));
 }

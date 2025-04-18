@@ -35,109 +35,44 @@ enum class EventType { CREATE, TRANSFER };
 
 class Transaction {
 private:
-    EventType           event;
-    std::string         assetId;      // e.g. “SKU‑123” or a serial number
-    std::string         fromParty;    // “GENESIS” for creation
-    std::string         toParty;
-    std::string         meta;         // free‑form JSON / notes
-    std::string         signature;    // optional crypto sig
+    EventType event;
+    std::string assetId, fromParty, toParty, meta, signature;
+    std::string hashProof;  // Added: PoW-related hash
 
 public:
     Transaction() = default;
-    Transaction(EventType ev,
-                std::string asset,
-                std::string from,
-                std::string to,
-                std::string meta = {})
-        : event(ev),
-          assetId(std::move(asset)),
-          fromParty(std::move(from)),
-          toParty(std::move(to)),
-          meta(std::move(meta)) {}
+    Transaction(EventType ev, std::string asset, std::string from, std::string to, std::string meta = {})
+        : event(ev), assetId(std::move(asset)), fromParty(std::move(from)), toParty(std::move(to)), meta(std::move(meta)) {}
 
-    // handy named constructors
-    static Transaction create(std::string assetId,
-                              std::string owner,
-                              std::string meta = {}) {
-        return Transaction(EventType::CREATE, std::move(assetId),
-                           "GENESIS", std::move(owner), std::move(meta));
+    static Transaction create(std::string assetId, std::string owner, std::string meta = {}) {
+        return Transaction(EventType::CREATE, std::move(assetId), "GENESIS", std::move(owner), std::move(meta));
     }
-    static Transaction transfer(std::string assetId,
-                                std::string from,
-                                std::string to,
-                                std::string meta = {}) {
-        return Transaction(EventType::TRANSFER, std::move(assetId),
-                           std::move(from), std::move(to), std::move(meta));
+    static Transaction transfer(std::string assetId, std::string from, std::string to, std::string meta = {}) {
+        return Transaction(EventType::TRANSFER, std::move(assetId), std::move(from), std::move(to), std::move(meta));
     }
 
-    // getters
-    EventType     getEvent()   const { return event;     }
-    const std::string& getAssetId()  const { return assetId;  }
-    const std::string& getFrom()     const { return fromParty;}
-    const std::string& getTo()       const { return toParty;  }
-    const std::string& getMeta()     const { return meta;     }
-    const std::string& getSignature()const { return signature;}
+    void setProofHash(const std::string& h) { hashProof = h; }
+    std::string getProofHash() const { return hashProof; }
+
+    EventType getEvent() const { return event; }
+    const std::string& getAssetId() const { return assetId; }
+    const std::string& getFrom() const { return fromParty; }
+    const std::string& getTo() const { return toParty; }
+    const std::string& getMeta() const { return meta; }
+    const std::string& getSignature() const { return signature; }
 
     void setSignature(const std::string& sig) { signature = sig; }
 
-    bool signTransaction(const std::string& privateKeyPEM) {
-        EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
-        if (!mdctx) return false;
-
-        BIO* bio = BIO_new_mem_buf(privateKeyPEM.c_str(), -1);
-        EVP_PKEY* pkey = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL);
-        BIO_free(bio);
-        if (!pkey) return false;
-
-        if (EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL, pkey) != 1) return false;
-
-        std::string data = getData();
-        if (EVP_DigestSignUpdate(mdctx, data.c_str(), data.size()) != 1) return false;
-
-        size_t sigLen;
-        if (EVP_DigestSignFinal(mdctx, NULL, &sigLen) != 1) return false;
-
-        std::string sig(sigLen, '\0');
-        if (EVP_DigestSignFinal(mdctx, reinterpret_cast<unsigned char*>(&sig[0]), &sigLen) != 1) return false;
-
-        sig.resize(sigLen);
-        signature = sig;
-
-        EVP_MD_CTX_free(mdctx);
-        EVP_PKEY_free(pkey);
-        return true;
-    }
-
-    bool verifySignature(const std::string& publicKeyPEM) const {
-        EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
-        if (!mdctx) return false;
-
-        BIO* bio = BIO_new_mem_buf(publicKeyPEM.c_str(), -1);
-        EVP_PKEY* pkey = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
-        BIO_free(bio);
-        if (!pkey) return false;
-
-        if (EVP_DigestVerifyInit(mdctx, NULL, EVP_sha256(), NULL, pkey) != 1) return false;
-
-        std::string data = getData();
-        if (EVP_DigestVerifyUpdate(mdctx, data.c_str(), data.size()) != 1) return false;
-
-        bool result = EVP_DigestVerifyFinal(mdctx,
-            reinterpret_cast<const unsigned char*>(signature.data()), signature.size()) == 1;
-
-        EVP_MD_CTX_free(mdctx);
-        EVP_PKEY_free(pkey);
-        return result;
-    }
+    bool signTransaction(const std::string& privateKeyPEM);
+    bool verifySignature(const std::string& publicKeyPEM) const;
 
     std::string getData() const {
-        return std::to_string(static_cast<int>(event))
-             + assetId + fromParty + toParty + meta;
+        return std::to_string(static_cast<int>(event)) + assetId + fromParty + toParty + meta;
     }
+
     std::string toString() const {
         std::ostringstream oss;
-        oss << '[' << (event == EventType::CREATE ? "CREATE" : "TRANSFER")
-            << "] " << assetId << ' '
+        oss << '[' << (event == EventType::CREATE ? "CREATE" : "TRANSFER") << "] " << assetId << ' '
             << fromParty << " -> " << toParty;
         if (!meta.empty()) oss << " | " << meta;
         return oss.str();
@@ -221,50 +156,45 @@ public:
 // Block - Contains transactions along with previous hash and proof-of-work details
 class Block {
 public:
-    std::string              previousHash;
-    std::string              merkleRoot;
-    std::string              hash;
-    std::string              version;
-    long long                timestamp;
-    int                      nonce = 0;
+    std::string previousHash, merkleRoot, hash, version;
+    long long timestamp;
+    int nonce = 0;
     std::vector<Transaction> transactions;
 
-    Block(std::vector<Transaction> txs,
-          std::string prevHash,
-          std::string ver = "1.0")
-        : previousHash(std::move(prevHash)),
-          transactions(std::move(txs)),
-          version(std::move(ver)) {
+    Block(std::vector<Transaction> txs, std::string prevHash, std::string ver = "1.0")
+        : previousHash(std::move(prevHash)), transactions(std::move(txs)), version(std::move(ver)) {
 
         timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::system_clock::now().time_since_epoch()
-                    ).count();
+                        std::chrono::system_clock::now().time_since_epoch()).count();
 
         std::vector<std::string> txHashes;
         txHashes.reserve(transactions.size());
-        for (const auto& tx : transactions)
-            txHashes.emplace_back(sha256(tx.toString()));
+        for (auto &tx : transactions) {
+            std::string proof = sha256(tx.toString());
+            tx.setProofHash(proof);
+            txHashes.emplace_back(proof);
+        }
 
         MerkleTree mt;
         merkleRoot = mt.calculateMerkleRoot(txHashes);
     }
 
     std::string data() const {
-        return previousHash + merkleRoot
-             + version + std::to_string(timestamp);
+        return previousHash + merkleRoot + version + std::to_string(timestamp);
     }
-    void setNonce(int n)      { nonce = n;        }
-    void setHash(std::string h){ hash = std::move(h);}
+    void setNonce(int n) { nonce = n; }
+    void setHash(std::string h) { hash = std::move(h); }
     std::string calculateHash() const {
         return sha256(data() + std::to_string(nonce));
     }
 };
 
 
+
 // Blockchain - Manages the chain of blocks and the addition of new blocks
 class Blockchain {
     std::vector<Block> chain;
-    int                difficulty;
+    int difficulty;
 
 public:
     explicit Blockchain(int diff = 3) : difficulty(diff) {
@@ -272,10 +202,7 @@ public:
     }
 
     void addBlock(std::vector<Transaction> txs) {
-        const std::string& prevHash =
-            chain.back().hash.empty() ? chain.back().calculateHash()
-                                      : chain.back().hash;
-
+        const std::string& prevHash = chain.back().hash.empty() ? chain.back().calculateHash() : chain.back().hash;
         Block block(std::move(txs), prevHash);
         ProofOfWork pow(difficulty);
         int nonce = 0;
@@ -283,6 +210,36 @@ public:
         block.setNonce(nonce);
         block.setHash(std::move(minedHash));
         chain.emplace_back(std::move(block));
+    }
+
+    void loadChain(const std::vector<std::vector<std::string>>& raw_chain) {
+        chain.clear();
+        chain.emplace_back(std::vector<Transaction>{}, "0");
+        for (const auto& blk : raw_chain) {
+            std::vector<Transaction> txObjs;
+            for (const auto& s : blk) {
+                auto e = s.find(']');
+                std::string evt = s.substr(1, e - 1);
+                std::string rest = s.substr(e + 2);
+                auto aidEnd = rest.find(' ');
+                std::string aid = rest.substr(0, aidEnd);
+                rest = rest.substr(aidEnd + 1);
+                auto arrow = rest.find("->");
+                std::string from = rest.substr(0, arrow - 1);
+                rest = rest.substr(arrow + 3);
+                std::string to, meta;
+                auto pipe = rest.find('|');
+                if (pipe != std::string::npos) {
+                    to = rest.substr(0, pipe - 1);
+                    meta = rest.substr(pipe + 2);
+                } else {
+                    to = rest;
+                }
+                txObjs.push_back(evt == "CREATE" ? Transaction::create(aid, to, meta)
+                                                 : Transaction::transfer(aid, from, to, meta));
+            }
+            addBlock(txObjs);
+        }
     }
 
     const std::vector<Block>& getChain() const { return chain; }
@@ -323,8 +280,7 @@ public:
 
 // helper
 // If you plan to expose this class to Python, export_block_txs is handy:
-inline std::vector<std::vector<std::string>>
-export_block_txs(const Blockchain& bc) {
+inline std::vector<std::vector<std::string>> export_block_txs(const Blockchain& bc) {
     std::vector<std::vector<std::string>> out;
     for (const auto& blk : bc.getChain()) {
         std::vector<std::string> txs;
@@ -332,7 +288,7 @@ export_block_txs(const Blockchain& bc) {
             txs.push_back(tx.toString());
         out.push_back(std::move(txs));
     }
-    return out;
+    return out;
 }
 
 #endif

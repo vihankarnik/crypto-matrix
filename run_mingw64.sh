@@ -12,8 +12,8 @@ cmake -G "MinGW Makefiles" .. && mingw32-make && cd ..
 # API_PID=$!
 
 # start UI (blocking)
-streamlit run app.py
+# streamlit run app.py
 
 # cleanup
-kill $API_PID
+# kill $API_PID
 
