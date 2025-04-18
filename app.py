@@ -1,47 +1,39 @@
+# app.py
 import streamlit as st
-import requests
-API = "http://localhost:8000"
+import main  # uses create_asset, transfer_asset, get_blocks
 
-st.set_page_config(page_title="SCM‑Chain Demo", layout="wide")
-tabs = st.tabs(["Create Asset", "Transfer Asset", "Track Asset", "Blockchain"])
+st.set_page_config(page_title="Supply Chain Blockchain", layout="wide")
+st.title("📦 Supply Chain Blockchain Explorer")
 
-# ──────────────────────────────────────────────────
-with tabs[0]:
-    st.header("📦 Register new asset")
-    asset = st.text_input("Asset ID (numeric for demo)")
-    owner = st.text_input("Initial owner")
-    if st.button("Create") and asset and owner:
-        r = requests.post(f"{API}/asset", json={"asset_id": asset, "owner": owner})
-        st.write(r.json() if r.ok else r.text)
+# ─── Tabs for interaction ─────────────────────────────
+tab1, tab2 = st.tabs(["➕ Add Transaction", "🔗 View Blockchain"])
 
-# ──────────────────────────────────────────────────
-with tabs[1]:
-    st.header("🔄 Transfer asset")
-    asset_t = st.text_input("Asset ID to transfer")
-    new_owner = st.text_input("New owner name")
-    if st.button("Transfer") and asset_t and new_owner:
-        r = requests.post(f"{API}/transfer",
-                          json={"asset_id": asset_t, "new_owner": new_owner})
-        st.write(r.json() if r.ok else r.text)
+with tab1:
+    tx_type = st.radio("Transaction Type", ["Create", "Transfer"])
+    asset_id = st.text_input("Asset ID", placeholder="e.g., SKU-123")
+    meta = st.text_area("Meta / Notes", placeholder="Any extra info...")
 
-# ──────────────────────────────────────────────────
-with tabs[2]:
-    st.header("🔍 Track asset")
-    aid = st.text_input("Asset ID to track")
-    if st.button("Get history") and aid:
-        r = requests.get(f"{API}/asset/{aid}")
-        if r.ok:
-            st.success(f"Current owner: {r.json()['latest_owner']}")
-            st.write(r.json()["history"])
-        else:
-            st.error(r.text)
+    if tx_type == "Create":
+        owner = st.text_input("Owner")
+        if st.button("Create Asset"):
+            if asset_id and owner:
+                main.create_asset(asset_id, owner, meta)
+                st.success(f"Created asset '{asset_id}' owned by {owner}")
+            else:
+                st.error("Asset ID and Owner are required.")
+    else:
+        from_party = st.text_input("From")
+        to_party = st.text_input("To")
+        if st.button("Transfer Asset"):
+            if asset_id and from_party and to_party:
+                main.transfer_asset(asset_id, from_party, to_party, meta)
+                st.success(f"Transferred '{asset_id}' from {from_party} to {to_party}")
+            else:
+                st.error("Asset ID, From, and To are required.")
 
-# ──────────────────────────────────────────────────
-with tabs[3]:
-    st.header("⛓️  Raw blockchain")
-    r = requests.get(f"{API}/chain")
-    for i, block in enumerate(r.json()):
-        st.subheader(f"Block {i}")
-        for tx in block:
-            st.code(tx, language="text")
-
+with tab2:
+    blocks = main.get_blocks()
+    for i, txs in enumerate(blocks):
+        with st.expander(f"🔗 Block {i} — {len(txs)} transactions"):
+            for tx in txs:
+                st.markdown(f"- `{tx}`")
