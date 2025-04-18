@@ -14,20 +14,31 @@ with tab1:
     if ev == "CREATE":
         to = st.text_input("Owner")
         if st.button("Create"):
-            res = requests.post(f"{API}/asset", json={"event": ev, "asset_id": aid, "to_party": to, "meta": meta})
-            st.success(res.json())
+            try:
+                res = requests.post(f"{API}/asset", json={"event": ev, "asset_id": aid, "to_party": to, "meta": meta})
+                st.success(res.json())
+            except requests.exceptions.RequestException as e:
+                st.error(f"❌ Request failed: {e}")
     else:
         frm = st.text_input("From")
         to  = st.text_input("To")
         if st.button("Transfer"):
-            res = requests.post(f"{API}/transfer", json={"event": ev, "asset_id": aid, "from_party": frm, "to_party": to, "meta": meta})
-            st.success(res.json())
+            try:
+                res = requests.post(f"{API}/transfer", json={"event": ev, "asset_id": aid, "from_party": frm, "to_party": to, "meta": meta})
+                st.success(res.json())
+            except requests.exceptions.RequestException as e:
+                st.error(f"❌ Request failed: {e}")
 
 with tab2:
     st.header("Blockchain Ledger")
 
     # fetch rich chain data
-    data = requests.get(f"{API}/chain_full").json()
+    try:
+        res = requests.get(f"{API}/chain_full")
+        if res.ok:
+            data = res.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"❌ Request failed: {e}")
 
     # skip genesis?
     data = [b for b in data if b["index"] != 0]
@@ -50,5 +61,10 @@ with tab2:
 
 with tab3:
     st.header("World State")
-    state = requests.get(f"{API}/state").json()
-    st.json(state)
+    try:
+        res = requests.get(f"{API}/state")
+        if res.ok:
+            state = res.json()
+            st.json(state)
+    except requests.exceptions.RequestException as e:
+        st.error(f"❌ Request failed: {e}")

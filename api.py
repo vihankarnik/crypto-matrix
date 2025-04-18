@@ -15,9 +15,8 @@ app.add_middleware(
 )
 
 # ─── Peer Identity ──────────────────────────────────────────
-PEER_PORT     = int(os.getenv("PORT", "8001"))
-PEER_PORT     = 8001
-SELF_URL      = f"http://127.0.0.1:{PEER_PORT}"
+SELF_PORT     = int(os.getenv("SELF_PORT", "8001"))
+SELF_URL      = f"http://127.0.0.1:{SELF_PORT}"
 BOOTSTRAP_URL = os.getenv("BOOTSTRAP_URL")        # e.g. "http://localhost:8001"
 PEERS         = set()
 CHAIN         = bc.Blockchain(3)
@@ -66,6 +65,32 @@ def startup():
 
 
 # ─── Helper Functions ───────────────────────────────────────
+def get_internal_ip() -> str | None:
+    """Get the *local* IP address of the current machine.
+
+    From: https://stackoverflow.com/a/28950776
+
+    Returns
+    -------
+    string
+        The local IPv4 address of the current machine.
+
+    """
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        try:
+            # Doesn't even have to be reachable
+            s.connect(("8.8.8.8", 1))
+            _internal_ip = s.getsockname()[0]
+        except Exception:
+            _internal_ip = "127.0.0.1"
+
+    return _internal_ip
+
+print("Private IP:", get_internal_ip())
+print("heyyy")
+
 def sync_chain():
     for peer in list(PEERS):
         if peer == SELF_URL:
@@ -172,7 +197,6 @@ def receive_from_peer(tx: TxModel):
 
 @app.get("/chain")
 def get_chain():
-    print("YESSSSSSSSSSS GET /chain request received")  # Log to check if this is hit
     return CHAIN.get_blocks()
 
 @app.get("/chain_full")
