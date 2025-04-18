@@ -16,11 +16,13 @@ app.add_middleware(
 
 # ─── Peer Identity ──────────────────────────────────────────
 PEER_PORT     = int(os.getenv("PORT", "8001"))
+PEER_PORT     = 8001
 SELF_URL      = f"http://127.0.0.1:{PEER_PORT}"
 BOOTSTRAP_URL = os.getenv("BOOTSTRAP_URL")        # e.g. "http://localhost:8001"
 PEERS         = set()
 CHAIN         = bc.Blockchain(3)
 WORLD_STATE   = {}
+INVENTORY     = {}
 
 # ─── Data Models ────────────────────────────────────────────
 class TxModel(BaseModel):
@@ -78,14 +80,31 @@ def sync_chain():
             print(f"⚠ Chain sync failed from {peer}: {e}")
 
 def refresh_state():
+    """
+    Re‑build WORLD_STATE and INVENTORY from scratch.
+    If any mismatch is found (e.g., an asset appears twice) we raise.
+    """
     WORLD_STATE.clear()
+    INVENTORY.clear()
+
     for block in CHAIN.get_blocks():
         for tx in block:
             parts = tx.split()
-            if len(parts) >= 4:
-                aid = parts[1]
-                to = parts[3]
-                WORLD_STATE[aid] = to
+            # "[CREATE] SKU GENESIS -> Alice | ... "
+            if len(parts) < 4:
+                continue
+            aid = parts[1]
+            owner = parts[3]
+
+            # ------------- 1) check duplicates -------------
+            if aid in WORLD_STATE and WORLD_STATE[aid] == owner:
+                raise ValueError(f"Duplicate CREATE or invalid transfer for asset {aid}")
+
+            # ------------- 2) update state / inventory -----
+            WORLD_STATE[aid] = owner
+            if owner not in INVENTORY:
+                INVENTORY[owner] = set()
+            INVENTORY[owner].add(aid)
 
 def broadcast(tx_data):
     for peer in list(PEERS):
@@ -95,6 +114,11 @@ def broadcast(tx_data):
             requests.post(f"{peer}/receive", json=tx_data, timeout=1)
         except:
             pass
+
+@app.get("/inventory")
+def inventory():
+    # convert set -> list for JSON serialisation
+    return {owner: list(ids) for owner, ids in INVENTORY.items()}
 
 # ─── P2P Peer Endpoints ─────────────────────────────────────
 @app.post("/peers")
@@ -119,14 +143,23 @@ def create_asset(tx: TxModel):
 
 @app.post("/transfer")
 def transfer_asset(tx: TxModel):
-    owner = WORLD_STATE.get(tx.asset_id)
-    if not owner:
+    # 1) asset must exist
+    current_owner = WORLD_STATE.get(tx.asset_id)
+    if current_owner is None:
         raise HTTPException(404, "Asset not found")
+
+    # 2) only the real owner can transfer
+    if tx.from_party != current_owner:
+        raise HTTPException(400,
+            f"Transfer failed: asset '{tx.asset_id}' is owned by '{current_owner}', not '{tx.from_party}'"
+        )
+
+    # 3) everything ok → create tx
     t = bc.Transaction.transfer(tx.asset_id, tx.from_party, tx.to_party, tx.meta)
     CHAIN.add_block([t])
     refresh_state()
     broadcast(tx.dict())
-    return {"status": "transferred"}
+    return {"status": "transferred", "from": tx.from_party, "to": tx.to_party}
 
 @app.post("/receive")
 def receive_from_peer(tx: TxModel):
@@ -141,6 +174,14 @@ def receive_from_peer(tx: TxModel):
 def get_chain():
     print("YESSSSSSSSSSS GET /chain request received")  # Log to check if this is hit
     return CHAIN.get_blocks()
+
+@app.get("/chain_full")
+def chain_full():
+    """
+    Returns every block with real nonce, prev‐hash, block‐hash, and tx list.
+    """
+    return CHAIN.get_chain_full()
+
 
 @app.get("/state")
 def get_state():

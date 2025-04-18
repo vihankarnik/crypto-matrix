@@ -288,7 +288,7 @@ inline std::vector<std::vector<std::string>> export_block_txs(const Blockchain& 
             txs.push_back(tx.toString());
         out.push_back(std::move(txs));
     }
-    return out;
+    return out;
 }
 
 #endif

@@ -25,15 +25,28 @@ with tab1:
 
 with tab2:
     st.header("Blockchain Ledger")
-    cols = st.columns(4)
-    blocks = requests.get(f"{API}/chain").json()
-    for i, blk in enumerate(blocks, start=1):
-        col = cols[(i-1)%4]
-        with col:
-            st.markdown(f"*Block {i}*")
-            for tx in blk:
-                st.code(tx)
-            if i < len(blocks): st.markdown("➜")
+
+    # fetch rich chain data
+    data = requests.get(f"{API}/chain_full").json()
+
+    # skip genesis?
+    data = [b for b in data if b["index"] != 0]
+
+    for i in range(0, len(data), 2):
+        cols = st.columns(2)
+        for j, blk in enumerate(data[i:i+2]):
+            with cols[j]:
+                st.markdown(f"### Block #{blk['index']}")
+                st.markdown(f"- **Nonce:** {blk['nonce']}")
+                st.markdown(f"- **Prev:** `{blk['prev']}`")
+                st.markdown(f"- **Hash:** `{blk['hash']}`")
+                st.markdown(f"- **Tx Count:** {len(blk['tx'])}")
+                for tx in blk["tx"]:
+                    st.code(tx)
+        if i+2 < len(data):
+            st.markdown("➜", unsafe_allow_html=True)
+
+
 
 with tab3:
     st.header("World State")
