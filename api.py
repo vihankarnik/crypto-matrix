@@ -159,7 +159,7 @@ def transfer_asset(tx: TxModel):
     CHAIN.add_block([t])
     refresh_state()
     broadcast(tx.dict())
-    return {"status": "transferred", "from": tx.from_party, "to": tx.to_party}
+    return {"status": "transferred", "from": tx.from_party, "to": tx.to_party}
 
 @app.post("/receive")
 def receive_from_peer(tx: TxModel):
