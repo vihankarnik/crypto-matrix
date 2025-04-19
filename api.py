@@ -91,20 +91,6 @@ def get_internal_ip() -> str | None:
 
 # print("Private IP:", get_internal_ip())
 
-def sync_chain():
-    for peer in list(PEERS):
-        if peer == SELF_URL:
-            continue
-        try:
-            r = requests.get(f"{peer}/chain", timeout=2)
-            if r.ok:
-                CHAIN.load_chain(r.json())
-                # print("THE OUTPUT OF PEER/CHAIN", r.json())
-                print(f"🔄 Synced chain from {peer}")
-                return
-        except Exception as e:
-            print(f"⚠ Chain sync failed from {peer}: {e}")
-
 def refresh_state():
     """
     Re-build WORLD_STATE and INVENTORY from scratch.
@@ -132,6 +118,20 @@ def refresh_state():
                 if owner not in INVENTORY:
                     INVENTORY[owner] = set()
                 INVENTORY[owner].add(aid)
+
+def sync_chain():
+    for peer in list(PEERS):
+        if peer == SELF_URL:
+            continue
+        try:
+            r = requests.get(f"{peer}/chain", timeout=2)
+            if r.ok:
+                CHAIN.load_chain(r.json())
+                # print("THE OUTPUT OF PEER/CHAIN", r.json())
+                print(f"🔄 Synced chain from {peer}")
+                return
+        except Exception as e:
+            print(f"⚠ Chain sync failed from {peer}: {e}")
 
 def broadcast(tx_data):
     for peer in list(PEERS):
