@@ -198,7 +198,7 @@ class Blockchain {
 
 public:
     explicit Blockchain(int diff = 3) : difficulty(diff) {
-        chain.emplace_back(std::vector<Transaction>{}, "0");
+        // chain.emplace_back(std::vector<Transaction>{}, "0"); // I don't want an empty GENESIS block
     }
 
     void addBlock(std::vector<Transaction> txs) {
@@ -220,12 +220,12 @@ public:
 
     void loadChain(const std::vector<std::vector<std::string>>& raw_chain) {
         chain.clear();
-        chain.emplace_back(std::vector<Transaction>{}, "0");
+        // chain.emplace_back(std::vector<Transaction>{}, "0");     // again, don't want empty GENESIS block
         for (const auto& blk : raw_chain) {
             std::vector<Transaction> txObjs;
-            for (const auto& s : blk) {
+            for (const auto& s : blk) {     // s = "[CREATE] Asset_ID GENESIS -> Alice | ... "
                 auto e = s.find(']');
-                std::string evt = s.substr(1, e - 1);
+                std::string evt = s.substr(1, e - 1); 
                 std::string rest = s.substr(e + 2);
                 auto aidEnd = rest.find(' ');
                 std::string aid = rest.substr(0, aidEnd);

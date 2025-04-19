@@ -15,9 +15,10 @@ app.add_middleware(
 )
 
 # ─── Peer Identity ──────────────────────────────────────────
-SELF_PORT     = int(os.getenv("SELF_PORT", "8001"))
+SELF_PORT     = os.getenv("SELF_PORT", "8001")
 SELF_URL      = f"http://127.0.0.1:{SELF_PORT}"
-BOOTSTRAP_URL = os.getenv("BOOTSTRAP_URL")        # e.g. "http://localhost:8001"
+BOOTSTRAP_PORT= os.getenv("BOOTSTRAP_PORT", None)
+BOOTSTRAP_URL = f"http://127.0.0.1:{BOOTSTRAP_PORT}" if BOOTSTRAP_PORT is not None else None     # e.g. "http://localhost:8001"
 PEERS         = set()
 CHAIN         = bc.Blockchain(3)
 WORLD_STATE   = {}
@@ -88,7 +89,7 @@ def get_internal_ip() -> str | None:
 
     return _internal_ip
 
-print("Private IP:", get_internal_ip())
+# print("Private IP:", get_internal_ip())
 
 def sync_chain():
     for peer in list(PEERS):
@@ -98,6 +99,7 @@ def sync_chain():
             r = requests.get(f"{peer}/chain", timeout=2)
             if r.ok:
                 CHAIN.load_chain(r.json())
+                # print("THE OUTPUT OF PEER/CHAIN", r.json())
                 print(f"🔄 Synced chain from {peer}")
                 return
         except Exception as e:
@@ -105,7 +107,7 @@ def sync_chain():
 
 def refresh_state():
     """
-    Re‑build WORLD_STATE and INVENTORY from scratch.
+    Re-build WORLD_STATE and INVENTORY from scratch.
     If any mismatch is found (e.g., an asset appears twice) we raise.
     """
     WORLD_STATE.clear()
@@ -114,7 +116,7 @@ def refresh_state():
     for block in CHAIN.get_blocks():
         for tx in block:
             parts = tx.split() # tx is a string
-            # "[CREATE] SKU GENESIS -> Alice | ... "
+            # "[CREATE] Asset_ID GENESIS -> Alice | ... "
             if len(parts) < 4:
                 continue
             aid = parts[1]
@@ -125,10 +127,11 @@ def refresh_state():
                 raise ValueError(f"Duplicate CREATE or invalid transfer for asset {aid}")
 
             # ------------- 2) update state / inventory -----
-            WORLD_STATE[aid] = owner
-            if owner not in INVENTORY:
-                INVENTORY[owner] = set()
-            INVENTORY[owner].add(aid)
+            else:
+                WORLD_STATE[aid] = owner
+                if owner not in INVENTORY:
+                    INVENTORY[owner] = set()
+                INVENTORY[owner].add(aid)
 
 def broadcast(tx_data):
     for peer in list(PEERS):

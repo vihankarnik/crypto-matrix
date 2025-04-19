@@ -18,7 +18,7 @@ static py::list export_chain_full(const Blockchain &bc) {
         d["index"] = i;
         d["nonce"] = blk.nonce;
         // real prev hash (genesis shows “—”)
-        d["prev"] = (i == 0 ? std::string("—")
+        d["prev"] = (i == 0 ? std::string("0")
                             : chain[i-1].hash.empty()
                                 ? chain[i-1].calculateHash()
                                 : chain[i-1].hash);
@@ -78,6 +78,7 @@ py::class_<Blockchain>(m, "Blockchain")
         .def("add_block",  &Blockchain::addBlock,   py::arg("transactions"))
         .def("get_blocks", &export_block_txs)   // existing
         // 2) new binding
-        .def("get_chain_full", &export_chain_full);
+        .def("get_chain_full", &export_chain_full)
+        .def("load_chain", &Blockchain::loadChain,  py::arg("raw_chain"));
 }
 

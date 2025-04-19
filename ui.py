@@ -1,7 +1,8 @@
 import streamlit as st
 import os, requests
 
-API = f"http://localhost:{os.getenv('PORT', '8001')}"
+API_PORT = os.getenv('SELF_PORT', '8001')
+API = f"http://127.0.0.1:{API_PORT}"
 st.set_page_config(page_title="SCM Node", layout="wide")
 st.title("📦 SupplyChain Node")
 
@@ -59,15 +60,13 @@ with tab2:
     st.header("Blockchain Ledger")
 
     # fetch rich chain data
+    data = []
     try:
         res = requests.get(f"{API}/chain_full")
         if res.ok:
             data = res.json()
     except requests.exceptions.RequestException as e:
         st.error(f"❌ Request failed: {e}")
-
-    # skip genesis?
-    data = [b for b in data if b["index"] != 0]
 
     max_per_row = 3
     for i in range(0, len(data), max_per_row):
