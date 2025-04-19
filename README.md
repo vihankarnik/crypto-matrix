@@ -18,7 +18,7 @@ git clone git@github.com:vihankarnik/crypto-matrix.git
 cd crypto-matrix
 ./install_dependencies.sh
 ```
-* Run `build.sh` to build the compiled libraries for the backend:
+* Run `build.sh` to build C++ compiled shared libraries for the backend:
 ```
 ./build.sh
 ```
@@ -29,3 +29,10 @@ cd crypto-matrix
 * Run `run.sh` again with a bootstrap port to start another peer instance that will communicate with the given port to gain information about the blockchain:
 
 ### Usage
+* Upon running the program, you will be presented with a simple web-based user interface in your browser. This UI allows you to:
+    * Create new assets by entering an asset ID, owner, and optional metadata.
+    * Transfer assets between parties by specifying the asset ID, current owner, new owner, and any notes.
+    * View the blockchain ledger, including all blocks, their hashes, and the transactions they contain.
+    * See the current world state, showing which assets are owned by whom.
+* You can run multiple nodes by starting the program on different ports. Each node will automatically connect to the network (if you provide a bootstrap peer) and synchronize its blockchain data.
+* No command-line interaction is required after startup—everything can be done through the web UI.
