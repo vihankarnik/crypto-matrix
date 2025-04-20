@@ -1,4 +1,6 @@
+requests==2.32.3
+pybind11==2.13.6
 fastapi==0.115.12
 pydantic==2.11.3
-Requests==2.32.3
-streamlit==1.33.0
+uvicorn==0.34.1
+streamlit==1.44.0
