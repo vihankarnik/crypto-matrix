@@ -1,10 +1,9 @@
-# crypto-matrix – Decentralized Blockchain-Based Supply Chain Tracker
+# CryptoMatrix – Decentralized Blockchain-Based Supply Chain Tracker
 
 **CryptoMatrix** is a decentralized blockchain-based web application developed using **C++**, **Python**, **Streamlit**, **FastAPI** and **Pybind11**. It demonstrates how blockchain can be applied to supply chain management for secure, immutable, and transparent asset tracking across multiple stakeholders. The app supports asset creation, transfers, and blockchain visualization, all powered by a lightweight proof-of-work blockchain core written in C++.
 
----
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [Features](#features)
 - [Technologies](#technologies)
@@ -13,9 +12,8 @@
 - [Blockchain Implementation Details](#blockchain-implementation-details)
 - [Future Improvements](#future-improvements)
 
----
 
-## ✅ Features
+## Features
 
 - **Asset Lifecycle Tracking**: Create and transfer supply chain assets with complete traceability.
 - **Blockchain Explorer UI**: View the blockchain as a horizontal sequence of blocks, each showing its transactions.
@@ -24,9 +22,8 @@
 - **Proof-of-Work Consensus**: Each block is mined through a simple proof-of-work mechanism.
 - **Chain Synchronization**: Nodes fetch the longest valid chain from known peers to ensure consistency.
 
----
 
-## ⚙️ Technologies
+## Technologies
 
 | Layer            | Technology                       |
 |------------------|-----------------------------------|
@@ -37,7 +34,6 @@
 | 🔐 Hashing        | SHA-256 (implemented in C++)      |
 | 🌐 Networking     | REST API for peer-to-peer sync    |
 
----
 
 ### How to execute
 To build on Windows, follow the steps:
@@ -64,7 +60,11 @@ cd crypto-matrix
 ```
 ./run.sh 8001
 ```
-* Run `run.sh` again with a bootstrap port to start another peer instance that will communicate with the given port to gain information about the blockchain:
+* Run `run.sh` again on a different port with a bootstrap port to start another peer instance that will communicate with the given port to gain information about the blockchain:
+```
+./run.sh 8002 8001
+```
+
 
 ### Usage
 * Upon running the program, you will be presented with a simple web-based user interface in your browser. This UI allows you to:
