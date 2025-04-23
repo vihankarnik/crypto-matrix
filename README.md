@@ -1,5 +1,43 @@
-# crypto-matrix
+# crypto-matrix – Decentralized Blockchain-Based Supply Chain Tracker
 
+**CryptoMatrix** is a decentralized blockchain-based web application developed using **C++**, **Python**, **Streamlit**, **FastAPI** and **Pybind11**. It demonstrates how blockchain can be applied to supply chain management for secure, immutable, and transparent asset tracking across multiple stakeholders. The app supports asset creation, transfers, and blockchain visualization, all powered by a lightweight proof-of-work blockchain core written in C++.
+
+---
+
+## 📑 Table of Contents
+
+- [Features](#features)
+- [Technologies](#technologies)
+- [Setup and Installation](#how-to-execute)
+- [Usage](#usage)
+- [Blockchain Implementation Details](#blockchain-implementation-details)
+- [Future Improvements](#future-improvements)
+
+---
+
+## ✅ Features
+
+- **Asset Lifecycle Tracking**: Create and transfer supply chain assets with complete traceability.
+- **Blockchain Explorer UI**: View the blockchain as a horizontal sequence of blocks, each showing its transactions.
+- **Decentralized Nodes**: Each node operates independently and can sync with other peers over HTTP.
+- **Immutable Ledger**: All transactions are recorded immutably using cryptographic hashes.
+- **Proof-of-Work Consensus**: Each block is mined through a simple proof-of-work mechanism.
+- **Chain Synchronization**: Nodes fetch the longest valid chain from known peers to ensure consistency.
+
+---
+
+## ⚙️ Technologies
+
+| Layer            | Technology                       |
+|------------------|-----------------------------------|
+| 🧠 Core Logic     | C++ (Blockchain engine)           |
+| 🔗 Python Bindings| Pybind11 (C++ ↔ Python bridge)    |
+| 🖥 Backend API    | Python (Flask)                    |
+| 🎨 Frontend UI    | Python (Streamlit)                |
+| 🔐 Hashing        | SHA-256 (implemented in C++)      |
+| 🌐 Networking     | REST API for peer-to-peer sync    |
+
+---
 
 ### How to execute
 To build on Windows, follow the steps:
