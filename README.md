@@ -29,7 +29,7 @@
 |------------------|-----------------------------------|
 | 🧠 Core Logic     | C++ (Blockchain engine)           |
 | 🔗 Python Bindings| Pybind11 (C++ ↔ Python bridge)    |
-| 🖥 Backend API    | Python (Flask)                    |
+| 🖥 Backend API    | Python (FastAPI served via Uvicorn)  |
 | 🎨 Frontend UI    | Python (Streamlit)                |
 | 🔐 Hashing        | SHA-256 (implemented in C++)      |
 | 🌐 Networking     | REST API for peer-to-peer sync    |
