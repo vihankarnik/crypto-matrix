@@ -2,6 +2,7 @@
 
 **CryptoMatrix** is a decentralized blockchain-based web application developed using **C++**, **Python**, **Streamlit**, **FastAPI** and **Pybind11**. It demonstrates how blockchain can be applied to supply chain management for secure, immutable, and transparent asset tracking across multiple stakeholders. The app supports asset creation, transfers, and blockchain visualization, all powered by a lightweight proof-of-work blockchain core written in C++.
 
+<div align="center"><img align="center" width=700px src=Picture1.png></div>
 
 ## Table of Contents
 
